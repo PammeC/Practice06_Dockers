@@ -1,0 +1,132 @@
+name: Push-to-EC2
+ 
+# Trigger deployment only on push to main branch
+on:
+  push:
+    branches:
+      - QA
+      
+jobs:
+  deploy:
+    name: Deploy to EC2 on test branch push
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout the files
+        uses: actions/checkout@v2
+ 
+      # Deploy to Server 1
+      - name: Deploy to Server 1
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS_QA1 }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: /home/ubuntu
+ 
+      - name: Verify files after deployment on Server 1
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA1 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Listing contents of /home/ubuntu:"
+            ls -l /home/ubuntu
+ 
+      - name: Install Apache and move files to Apache directory on Server 1
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA1 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo apt-get -y update
+            sudo apt-get install -y apache2
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
+            sudo mv /home/ubuntu/* /var/www/html
+ 
+      - name: Verify files in Apache directory on Server 1
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA1 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Listing contents of /var/www/html:"
+            ls -l /var/www/html
+ 
+      - name: Modify index.html for Server 1
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA1 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            PRIVATE_IP=$(hostname -I | awk '{print $1}')
+            FILE_PATH="/var/www/html/index.html"
+            if [ -f "$FILE_PATH" ]; then
+              sudo sed -i "s/\$(hostname -f)/$PRIVATE_IP/" "$FILE_PATH"
+            else
+              echo "Error: File $FILE_PATH not found."
+              exit 1
+            fi
+
+      # Deploy to Server 2
+      - name: Deploy to Server 2
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS_QA2 }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: /home/ubuntu
+ 
+      - name: Verify files after deployment on Server 2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA2 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Listing contents of /home/ubuntu:"
+            ls -l /home/ubuntu
+ 
+      - name: Install Apache and move files to Apache directory on Server 2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA2 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo apt-get -y update
+            sudo apt-get install -y apache2
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
+            sudo mv /home/ubuntu/* /var/www/html
+ 
+      - name: Verify files in Apache directory on Server 2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA2 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Listing contents of /var/www/html:"
+            ls -l /var/www/html
+ 
+      - name: Modify index.html for Server 2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS_QA2 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            PRIVATE_IP=$(hostname -I | awk '{print $1}')
+            FILE_PATH="/var/www/html/index.html"
+            if [ -f "$FILE_PATH" ]; then
+              sudo sed -i "s/\$(hostname -f)/$PRIVATE_IP/" "$FILE_PATH"
+            else
+              echo "Error: File $FILE_PATH not found."
+              exit 1
+            fi
