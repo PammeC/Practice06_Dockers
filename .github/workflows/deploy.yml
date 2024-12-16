@@ -34,7 +34,7 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: |
           docker tag my-app ${{ secrets.DOCKER_USERNAME }}/my-app:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest 
 
       # Instalar Docker en los servidores EC2 (si no está instalado)
       - name: Install Docker on Server 1
